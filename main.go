@@ -37,7 +37,7 @@ func SyncDatabase(){
         DB.AutoMigrate(&User{})
 }
 func Signup(c *gin.Context){
-	//Get the email/pass off req body
+	//Получи имейл и пароль через запрос
 	var body struct {
 		Email string
 		Password string
@@ -48,14 +48,14 @@ func Signup(c *gin.Context){
 			"error":"Failed to read body",})
 		return	
 	}
-	//Hash the password
+	//Захеширую пароль
 	hash, err := bcrypt.GenerateFromPassword([]byte(body.Password), 10)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
                         "error":"Failed to hash password",})
                 return
 	}
-	// Create the user
+	// Создай пользователя
 	user := User{Email:body.Email, Password:string(hash)}
 	result := DB.Create(&user)
 	if result.Error != nil {
@@ -63,11 +63,11 @@ func Signup(c *gin.Context){
                         "error":"Failed to read body",})
                 return
 	}
-	// Respond
+	// Ответь
 	c.JSON(http.StatusOK, gin.H{})
 }
 func Login(c *gin.Context){
-	//Get the email and passwd of req body
+	//Получи имейл и пароль через запрос
 	var body struct {
             Email string
             Password string
@@ -77,7 +77,7 @@ func Login(c *gin.Context){
                         "error":"Failed to read body",})
                 return
         }
-	//Look up requested user
+	//Изучи пользователя
 	var user User
 	DB.First(&user, "email = ?", body.Email)
 	if user.ID == 0 {
@@ -85,26 +85,26 @@ func Login(c *gin.Context){
                         "error":"Invalid email or password",})
                 return
 	}
-	//compare sent in pass with saved user pass hash
+	// сравни и отправь захешированный пароль
 	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(body.Password))
 	if err != nil {
 		 c.JSON(http.StatusBadRequest, gin.H{
                         "error":"Failed to read body",})
                 return
 	}
-	//Generate a jwt token
+	//Создай jwt токен
 	token := jwt.NewWithClaims(jwt.SigningMethodHS512, jwt.MapClaims{
 		"sub": user.ID,
 		"exp":time.Now().Add(time.Hour * 24 * 30).Unix(),
 	})
-	//Sign and get the compelete encoded token as a string using the secret
+	// Залогинся и получи закодированный токен в качестве строки используя переменную Секрет
 	tokenString, err := token.SignedString([]byte(os.Getenv("SECRET")))
 	if err != nil {
 		 c.JSON(http.StatusBadRequest, gin.H{
                         "error":"Failed to creat token",})
                 return
 	}
-	//send it back
+	//пошли обратно
 	c.JSON(http.StatusOK, gin.H{
 		"token" : tokenString,
 	})
